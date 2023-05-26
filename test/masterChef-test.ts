@@ -1,12 +1,16 @@
 import { ethers } from "hardhat";
 import { readFile } from "fs/promises";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { TokenListingProposal, MasterChefProposal, ERC20 } from "../typechain-types";
+import {
+  TokenListingProposal,
+  MasterChefProposal,
+  ERC20,
+} from "../typechain-types";
 import { BigNumber } from "ethers";
 import { expect } from "chai";
 import { impersonateAccount } from "@nomicfoundation/hardhat-network-helpers";
 
-const USDC_ADDRESS =  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" 
+const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
 async function getAbi(path: string) {
   const data = await readFile(path, "utf8");
@@ -20,8 +24,6 @@ async function getContract(pathToAbi: string, deployedAddress: string) {
   return new ethers.Contract(deployedAddress, abi, prov);
 }
 
-// npx hardhat node --fork https://mainnet.infura.io/v3/7161f47da2274d15a658edd4186af531
-// npx hardhat test ./test/CurveCompoundConvexTest.ts --network localhost 
 // https://ethereum.org/en/developers/tutorials/downsizing-contracts-to-fight-the-contract-size-limit/
 describe("MasterChefProposal", function () {
   let USDC: ERC20;
@@ -43,13 +45,21 @@ describe("MasterChefProposal", function () {
       to: impersonatedSignerUSDC.address,
       value: ethers.utils.parseEther("100"),
     };
-    signers[1].sendTransaction(tx)
+    signers[1].sendTransaction(tx);
 
     await usdc.connect(impersonatedSignerUSDC).updateMasterMinter(usdcOwner);
-    await usdc.connect(impersonatedSignerUSDC).configureMinter(usdcOwner, ethers.constants.MaxUint256);
-    console.log("USDC balance before: %s", await usdc.balanceOf(signers[0].address));
+    await usdc
+      .connect(impersonatedSignerUSDC)
+      .configureMinter(usdcOwner, ethers.constants.MaxUint256);
+    console.log(
+      "USDC balance before: %s",
+      await usdc.balanceOf(signers[0].address)
+    );
     await usdc.connect(impersonatedSignerUSDC).mint(signers[0].address, toMint);
-    console.log("USDC balance after: %s", await usdc.balanceOf(signers[0].address));
+    console.log(
+      "USDC balance after: %s",
+      await usdc.balanceOf(signers[0].address)
+    );
   });
 
   it("Deploy MasterChefProposal", async () => {
@@ -80,28 +90,37 @@ describe("MasterChefProposal", function () {
       destributionPeriod,
       proposalDeadline,
       adminAddress
-    )
- 
-   console.log("proposalAddress: ", proposalAddress)
-  //  console.log("After Deploy: %s", await USDC.balanceOf(signers[0].address));
-  //  console.log("After on Proposal Deploy: %s", await USDC.balanceOf(proposalAddress));
-  //  console.log("After on MasterChef Deploy: %s", await USDC.balanceOf(Chef.address));
-    Proposal = await ethers.getContractAt("TokenListingProposal", proposalAddress);
+    );
+
+    console.log("proposalAddress: ", proposalAddress);
+    //  console.log("After Deploy: %s", await USDC.balanceOf(signers[0].address));
+    //  console.log("After on Proposal Deploy: %s", await USDC.balanceOf(proposalAddress));
+    //  console.log("After on MasterChef Deploy: %s", await USDC.balanceOf(Chef.address));
+    Proposal = await ethers.getContractAt(
+      "TokenListingProposal",
+      proposalAddress
+    );
   });
 
   it("Stake on TokenListingProposal", async () => {
     const _amountToStake = 1000000000;
     const _lockPeriod = 100000;
 
-    await USDC.connect(signers[0].address).approve(Proposal.address, 10000000000000);
-    console.log("alllow ", await USDC.connect(signers[0].address).allowance(signers[0].address, Proposal.address))
+    await USDC.connect(signers[0].address).approve(
+      Proposal.address,
+      10000000000000
+    );
+    console.log(
+      "alllow ",
+      await USDC.connect(signers[0].address).allowance(
+        signers[0].address,
+        Proposal.address
+      )
+    );
     // console.log("USDC balance before Stake: %s", await USDC.balanceOf(signers[0].address));
     // console.log("USDC balance on Proposal before Stake: %s", await USDC.balanceOf(Proposal.address));
     // console.log("USDC balance on MasterChef before Stake: %s", await USDC.balanceOf(Chef.address));
-    await Proposal.stakeOnProposal(
-      _amountToStake,
-      _lockPeriod
-    )
+    await Proposal.stakeOnProposal(_amountToStake, _lockPeriod);
     // console.log("USDC balance after Stake: %s", await USDC.balanceOf(signers[0].address));
     // console.log("USDC balance on Proposal after Stake: %s", await USDC.balanceOf(Proposal.address));
     // console.log("USDC balance on MasterChef after Stake: %s", await USDC.balanceOf(Chef.address));
@@ -118,5 +137,3 @@ describe("MasterChefProposal", function () {
     // console.log("USDC balance on MasterChef after claimRewards: %s", await USDC.balanceOf(Chef.address));
   });
 });
-
-

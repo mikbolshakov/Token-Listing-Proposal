@@ -16,14 +16,28 @@ contract MasterChefProposal is Ownable {
         uint256 _proposalDeadline,
         address _admin
     ) external onlyOwner returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(_incentiveTokenAddress, _destributionPeriod));
+        bytes32 salt = keccak256(
+            abi.encodePacked(_incentiveTokenAddress, _destributionPeriod)
+        );
         address tokenListingAddress;
         tokenListingAddress = address(new TokenListingProposal{salt: salt}());
 
-        if (IERC20Upgradeable(_incentiveTokenAddress).allowance(address(this), tokenListingAddress) < _incentiveTokenAmount) {
-            IERC20Upgradeable(_incentiveTokenAddress).approve(tokenListingAddress, type(uint256).max);
+        if (
+            IERC20Upgradeable(_incentiveTokenAddress).allowance(
+                address(this),
+                tokenListingAddress
+            ) < _incentiveTokenAmount
+        ) {
+            IERC20Upgradeable(_incentiveTokenAddress).approve(
+                tokenListingAddress,
+                type(uint256).max
+            );
         }
-         IERC20Upgradeable(_incentiveTokenAddress).transferFrom(msg.sender, tokenListingAddress, _incentiveTokenAmount);
+        IERC20Upgradeable(_incentiveTokenAddress).transferFrom(
+            msg.sender,
+            tokenListingAddress,
+            _incentiveTokenAmount
+        );
         //  IERC20Upgradeable(_incentiveTokenAddress).transferFrom(tokenListingAddress, tokenListingAddress, _incentiveTokenAmount);
 
         TokenListingProposal(tokenListingAddress).initialize(
@@ -36,11 +50,10 @@ contract MasterChefProposal is Ownable {
         );
 
         emit NewSmartChefContract(tokenListingAddress);
-        console.log("ADDRESS ", tokenListingAddress);
         return tokenListingAddress;
     }
 
     function setAsxFee(uint256 _asxFee) external onlyOwner {
-      asxFee = _asxFee;
+        asxFee = _asxFee;
     }
 }

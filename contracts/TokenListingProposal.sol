@@ -6,22 +6,28 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import 'hardhat/console.sol';
+import "hardhat/console.sol";
 
-contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradeable, AccessControlUpgradeable {
+contract TokenListingProposal is
+    Initializable,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    AccessControlUpgradeable
+{
     bytes32 public constant ADMIN = keccak256("ADMIN");
-    IERC20Upgradeable public asxAddress = IERC20Upgradeable(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // USDC
-    address public incentiveTokenAddress; // адрес инсентив токена
-    uint256 public destributionPeriod; // период, в течение которого после апрува будут рапределяться награды
-    uint256 public proposalDeadline; // время, когда пропозал будет Removed
-    uint256 public proposalCreationTimestamp; // timestamp создания пропозала
-    uint256 public hostAmount; // сумма от которой юзер считается хостом
+    IERC20Upgradeable public asxAddress =
+        IERC20Upgradeable(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // USDC
+    address public incentiveTokenAddress;
+    uint256 public destributionPeriod; // the period during which rewards will be distributed after the approval
+    uint256 public proposalDeadline; // the time when proposal will be Removed
+    uint256 public proposalCreationTimestamp; // proposal creation timestamp
+    uint256 public hostAmount; // the amount from which the user is considered a host
 
     uint256 approveAmount;
     uint256 removeAmount;
 
-    uint256 public totalAsxOnProposalStakeAmount; // всего ASX застейкано на пропозале
-    uint256 public incentiveTokenTotalAmount; // всего инсентив токенов застейкано на пропозале
+    uint256 public totalAsxOnProposalStakeAmount; // total ASX staked on proposal
+    uint256 public incentiveTokenTotalAmount; // total incentive tokens staked on proposal
 
     address public immutable SMART_CHEF_FACTORY; // The address of the smart chef factory
     enum State {
@@ -48,21 +54,25 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
 
     mapping(address => UserInfo) public accountsStakingInfo;
 
-    event CreatedProposal(address incentivelToken, uint256 destributionPeriod, uint256 proposalDeadline);
+    event CreatedProposal(
+        address incentivelToken,
+        uint256 destributionPeriod,
+        uint256 proposalDeadline
+    );
     event CanApproveProposal(uint256 totalStakeAmount);
     event NeedApproveProposal(uint256 totalAsxOnProposalStakeAmount);
     event DepositOnProposal(uint256 amount);
     event ApprovedProposal(uint256 timestamp);
     event RemovedProposal(uint256 timestamp);
 
-    modifier isApproved {
-      require(state == State.Approved, "Not Approved");
-      _;
+    modifier isApproved() {
+        require(state == State.Approved, "Not Approved");
+        _;
     }
 
-    modifier isRemoved {
-      require(state == State.Removed, "Not Removed");
-      _;
+    modifier isRemoved() {
+        require(state == State.Removed, "Not Removed");
+        _;
     }
 
     constructor() {
@@ -90,12 +100,17 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
         // } Error: approve on 0 address
 
         // asxAddress.transferFrom(msg.sender, address(0), _asxFee); Error: transfer on 0 address (need burn)
-        IERC20Upgradeable(_incentiveTokenAddress).transferFrom(msg.sender, address(this), _incentiveTokenAmount);
+        IERC20Upgradeable(_incentiveTokenAddress).transferFrom(
+            msg.sender,
+            address(this),
+            _incentiveTokenAmount
+        );
 
         incentiveTokenAddress = _incentiveTokenAddress;
         proposalDeadline = block.timestamp + _proposalDeadline;
         destributionPeriod = _destributionPeriod;
-        accountsStakingInfo[msg.sender].incentiveTokenAmount += _incentiveTokenAmount;
+        accountsStakingInfo[msg.sender]
+            .incentiveTokenAmount += _incentiveTokenAmount;
         incentiveTokenTotalAmount += _incentiveTokenAmount;
         proposalCreationTimestamp = block.timestamp;
 
@@ -104,17 +119,25 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         // transferOwnership(_admin);
 
-        emit CreatedProposal(incentiveTokenAddress, destributionPeriod, proposalDeadline);
+        emit CreatedProposal(
+            incentiveTokenAddress,
+            destributionPeriod,
+            proposalDeadline
+        );
     }
 
-    function stakeOnProposal(uint256 _amountToStake, uint256 _lockPeriod) external {
+    function stakeOnProposal(
+        uint256 _amountToStake,
+        uint256 _lockPeriod
+    ) external {
         require(state != State.Removed);
-        // минимальная сумма стейка = минимальная сумма withdraw
+        // minimum stake amount = minimum withdraw amount
 
-        // if (IERC20Upgradeable(asxAddress).allowance(msg.sender, address(this)) < _amountToStake) {
-        //     IERC20Upgradeable(asxAddress).approve(address(this), type(uint256).max);
-        // }
-        IERC20Upgradeable(asxAddress).transferFrom(msg.sender, address(this), _amountToStake);
+        IERC20Upgradeable(asxAddress).transferFrom(
+            msg.sender,
+            address(this),
+            _amountToStake
+        );
 
         uint256 amountWithTimeLock;
         if (_lockPeriod >= 90 days) {
@@ -137,7 +160,8 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
         });
         accountsStakingInfo[msg.sender].allStakes.push(newStake);
         accountsStakingInfo[msg.sender].totalStakeAmount += _amountToStake;
-        accountsStakingInfo[msg.sender].totalStakeAmountWithTimeLock += amountWithTimeLock;
+        accountsStakingInfo[msg.sender]
+            .totalStakeAmountWithTimeLock += amountWithTimeLock;
 
         if (totalAsxOnProposalStakeAmount >= approveAmount) {
             emit CanApproveProposal(totalAsxOnProposalStakeAmount);
@@ -156,39 +180,74 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
 
         uint256 userReward = calcRewards();
 
-        // Обменивает incentiveToken реварды на ASX и оставляет их на контракте
-        // Увеличивает долю юзера в общем стейке пропозала
+        // Exchanges incentiveToken rewards for ASX and leaves them on the contract
+        // Increases the user's share in the total propozal stake
     }
 
-    function calcRewards() public returns(uint256) {
-        uint256 generelRewardPerSecond = incentiveTokenTotalAmount / destributionPeriod;
+    function calcRewards() public returns (uint256) {
+        uint256 generelRewardPerSecond = incentiveTokenTotalAmount /
+            destributionPeriod;
         uint256 userReward;
-        for (uint256 i = 0; i < accountsStakingInfo[msg.sender].allStakes.length; i++) {
-            uint256 stakeShareOfTotalStake = accountsStakingInfo[msg.sender].allStakes[i].stakeAmountWithTimeLock / totalAsxOnProposalStakeAmount;
+        for (
+            uint256 i = 0;
+            i < accountsStakingInfo[msg.sender].allStakes.length;
+            i++
+        ) {
+            uint256 stakeShareOfTotalStake = accountsStakingInfo[msg.sender]
+                .allStakes[i]
+                .stakeAmountWithTimeLock / totalAsxOnProposalStakeAmount;
             uint256 rewardPerSecondForStake;
-            if (accountsStakingInfo[msg.sender].allStakes[i].rewardTimestamp < proposalCreationTimestamp) {
-                rewardPerSecondForStake = generelRewardPerSecond * (block.timestamp - proposalCreationTimestamp) * stakeShareOfTotalStake;
+            if (
+                accountsStakingInfo[msg.sender].allStakes[i].rewardTimestamp <
+                proposalCreationTimestamp
+            ) {
+                rewardPerSecondForStake =
+                    generelRewardPerSecond *
+                    (block.timestamp - proposalCreationTimestamp) *
+                    stakeShareOfTotalStake;
             } else {
-                rewardPerSecondForStake = generelRewardPerSecond * (block.timestamp - accountsStakingInfo[msg.sender].allStakes[i].rewardTimestamp) * stakeShareOfTotalStake;
+                rewardPerSecondForStake =
+                    generelRewardPerSecond *
+                    (block.timestamp -
+                        accountsStakingInfo[msg.sender]
+                            .allStakes[i]
+                            .rewardTimestamp) *
+                    stakeShareOfTotalStake;
             }
             userReward += rewardPerSecondForStake;
-            accountsStakingInfo[msg.sender].allStakes[i].rewardTimestamp = block.timestamp;
+            accountsStakingInfo[msg.sender].allStakes[i].rewardTimestamp = block
+                .timestamp;
         }
         return userReward;
     }
 
     function withdrawWhenApproved(uint256 _amount) external isApproved {
-        // минимальная сумма стейка = минимальная сумма withdraw
+        // minimum stake amount = minimum withdraw amount
 
         uint256 amountToWithdraw;
         uint256 amountToWithdrawWithTimeLock;
-        for (uint256 i = 0; i < accountsStakingInfo[msg.sender].allStakes.length; i++) {
-            if (accountsStakingInfo[msg.sender].allStakes[i].unlockTimestamp < block.timestamp) {
+        for (
+            uint256 i = 0;
+            i < accountsStakingInfo[msg.sender].allStakes.length;
+            i++
+        ) {
+            if (
+                accountsStakingInfo[msg.sender].allStakes[i].unlockTimestamp <
+                block.timestamp
+            ) {
                 if (amountToWithdraw < _amount) {
-                    amountToWithdraw += accountsStakingInfo[msg.sender].allStakes[i].stakeAmount;
-                    amountToWithdrawWithTimeLock += accountsStakingInfo[msg.sender].allStakes[i].stakeAmountWithTimeLock;
-                    accountsStakingInfo[msg.sender].allStakes[i].stakeAmount = 0;
-                    accountsStakingInfo[msg.sender].allStakes[i].stakeAmountWithTimeLock = 0;
+                    amountToWithdraw += accountsStakingInfo[msg.sender]
+                        .allStakes[i]
+                        .stakeAmount;
+                    amountToWithdrawWithTimeLock += accountsStakingInfo[
+                        msg.sender
+                    ].allStakes[i].stakeAmountWithTimeLock;
+                    accountsStakingInfo[msg.sender]
+                        .allStakes[i]
+                        .stakeAmount = 0;
+                    accountsStakingInfo[msg.sender]
+                        .allStakes[i]
+                        .stakeAmountWithTimeLock = 0;
                 }
             }
         }
@@ -203,10 +262,12 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
         });
         accountsStakingInfo[msg.sender].allStakes.push(newStake);
         accountsStakingInfo[msg.sender].totalStakeAmount -= _amount;
-        accountsStakingInfo[msg.sender].totalStakeAmountWithTimeLock -= amountToWithdrawWithTimeLock;
+        accountsStakingInfo[msg.sender]
+            .totalStakeAmountWithTimeLock -= amountToWithdrawWithTimeLock;
 
         accountsStakingInfo[msg.sender].totalStakeAmount += newStakeAmount;
-        accountsStakingInfo[msg.sender].totalStakeAmountWithTimeLock += newStakeAmount;
+        accountsStakingInfo[msg.sender]
+            .totalStakeAmountWithTimeLock += newStakeAmount;
 
         totalAsxOnProposalStakeAmount -= amountToWithdrawWithTimeLock;
         totalAsxOnProposalStakeAmount += newStakeAmount;
@@ -219,29 +280,49 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
     }
 
     function withdrawWhenRemoved() external isRemoved {
-        uint256 amountToWithdraw = accountsStakingInfo[msg.sender].totalStakeAmount - (accountsStakingInfo[msg.sender].totalStakeAmount / 100);
+        uint256 amountToWithdraw = accountsStakingInfo[msg.sender]
+            .totalStakeAmount -
+            (accountsStakingInfo[msg.sender].totalStakeAmount / 100);
         accountsStakingInfo[msg.sender].totalStakeAmount = 0;
         accountsStakingInfo[msg.sender].totalStakeAmountWithTimeLock = 0;
 
-        totalAsxOnProposalStakeAmount -= accountsStakingInfo[msg.sender].totalStakeAmountWithTimeLock = 0;
+        totalAsxOnProposalStakeAmount -= accountsStakingInfo[msg.sender]
+            .totalStakeAmountWithTimeLock = 0;
         asxAddress.transfer(msg.sender, amountToWithdraw);
     }
 
     function withdrawIncentiveTokenWhenRemoved() external isRemoved {
-        uint256 amountToWithdraw = accountsStakingInfo[msg.sender].incentiveTokenAmount;
+        uint256 amountToWithdraw = accountsStakingInfo[msg.sender]
+            .incentiveTokenAmount;
         incentiveTokenTotalAmount -= amountToWithdraw;
         accountsStakingInfo[msg.sender].incentiveTokenAmount = 0;
 
-        IERC20Upgradeable(incentiveTokenAddress).transfer(msg.sender, amountToWithdraw);
+        IERC20Upgradeable(incentiveTokenAddress).transfer(
+            msg.sender,
+            amountToWithdraw
+        );
     }
 
     function depositIncentiveToken(uint256 _incentiveTokenAmount) external {
-        if (IERC20Upgradeable(incentiveTokenAddress).allowance(msg.sender, address(this)) < _incentiveTokenAmount) {
-            IERC20Upgradeable(incentiveTokenAddress).approve(address(this), type(uint256).max);
+        if (
+            IERC20Upgradeable(incentiveTokenAddress).allowance(
+                msg.sender,
+                address(this)
+            ) < _incentiveTokenAmount
+        ) {
+            IERC20Upgradeable(incentiveTokenAddress).approve(
+                address(this),
+                type(uint256).max
+            );
         }
-        IERC20Upgradeable(incentiveTokenAddress).transferFrom(msg.sender, address(this), _incentiveTokenAmount);
+        IERC20Upgradeable(incentiveTokenAddress).transferFrom(
+            msg.sender,
+            address(this),
+            _incentiveTokenAmount
+        );
 
-        accountsStakingInfo[msg.sender].incentiveTokenAmount += _incentiveTokenAmount;
+        accountsStakingInfo[msg.sender]
+            .incentiveTokenAmount += _incentiveTokenAmount;
         incentiveTokenTotalAmount += _incentiveTokenAmount;
         emit DepositOnProposal(_incentiveTokenAmount);
     }
@@ -249,15 +330,22 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
     function burnAsx(uint256 _amount) external isApproved {
         uint256 amountToBurn;
         uint256 amountToBurnWithTimeLock;
-        // можно начинать цикл с последнего элемента, делая i-- 
-        // Так как если юзер в самом начале застейкал ASX на год, то мы уменьшаем его долю с учетом Timlock Bonus
-        // аналогично в функции withdrawWhenApproved
-        for (uint256 i = 0; i < accountsStakingInfo[msg.sender].allStakes.length; i++) {
+        for (
+            uint256 i = 0;
+            i < accountsStakingInfo[msg.sender].allStakes.length;
+            i++
+        ) {
             if (amountToBurn < _amount) {
-                amountToBurn += accountsStakingInfo[msg.sender].allStakes[i].stakeAmount;
-                amountToBurnWithTimeLock += accountsStakingInfo[msg.sender].allStakes[i].stakeAmountWithTimeLock;
+                amountToBurn += accountsStakingInfo[msg.sender]
+                    .allStakes[i]
+                    .stakeAmount;
+                amountToBurnWithTimeLock += accountsStakingInfo[msg.sender]
+                    .allStakes[i]
+                    .stakeAmountWithTimeLock;
                 accountsStakingInfo[msg.sender].allStakes[i].stakeAmount = 0;
-                accountsStakingInfo[msg.sender].allStakes[i].stakeAmountWithTimeLock = 0;
+                accountsStakingInfo[msg.sender]
+                    .allStakes[i]
+                    .stakeAmountWithTimeLock = 0;
             }
         }
         require(amountToBurn >= _amount, "Can't burn this amount");
@@ -277,11 +365,13 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
         });
         accountsStakingInfo[msg.sender].allStakes.push(newStake);
         accountsStakingInfo[msg.sender].totalStakeAmount -= _amount;
-        accountsStakingInfo[msg.sender].totalStakeAmountWithTimeLock -= amountToBurnWithTimeLock;
+        accountsStakingInfo[msg.sender]
+            .totalStakeAmountWithTimeLock -= amountToBurnWithTimeLock;
 
         accountsStakingInfo[msg.sender].totalDiscountAmount += _amount;
         accountsStakingInfo[msg.sender].totalStakeAmount += newStakeAmount;
-        accountsStakingInfo[msg.sender].totalStakeAmountWithTimeLock += newStakeAmount;
+        accountsStakingInfo[msg.sender]
+            .totalStakeAmountWithTimeLock += newStakeAmount;
 
         totalAsxOnProposalStakeAmount -= amountToBurnWithTimeLock;
         totalAsxOnProposalStakeAmount += newStakeAmount;
@@ -292,19 +382,28 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
         }
     }
 
-    function decreaseDiscountAmount(address _user, uint256 _amount) external onlyRole(ADMIN) {
-        require(accountsStakingInfo[_user].totalDiscountAmount >= _amount, "Not enough discount amount");
+    function decreaseDiscountAmount(
+        address _user,
+        uint256 _amount
+    ) external onlyRole(ADMIN) {
+        require(
+            accountsStakingInfo[_user].totalDiscountAmount >= _amount,
+            "Not enough discount amount"
+        );
         accountsStakingInfo[_user].totalDiscountAmount -= _amount;
     }
 
-    function checkUserTier(address _user) external view returns (uint8 userTier) {
-        uint256 userTotalStakeAmount = accountsStakingInfo[_user].totalStakeAmountWithTimeLock;
+    function checkUserTier(
+        address _user
+    ) external view returns (uint8 userTier) {
+        uint256 userTotalStakeAmount = accountsStakingInfo[_user]
+            .totalStakeAmountWithTimeLock;
 
         if (userTotalStakeAmount < 10000) {
             return 0; // 0% discount
         } else if (userTotalStakeAmount < 20000) {
             return 1; // 10% fee discount
-        }else if (userTotalStakeAmount < 30000) {
+        } else if (userTotalStakeAmount < 30000) {
             return 2; // 15% fee discount
         } else if (userTotalStakeAmount < 40000) {
             return 3; // 30% fee discount
@@ -315,19 +414,23 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
 
     // Hosts
     function checkHost(address _user) external view returns (bool) {
-        uint256 userTotalStakeAmount = accountsStakingInfo[_user].totalStakeAmountWithTimeLock;
+        uint256 userTotalStakeAmount = accountsStakingInfo[_user]
+            .totalStakeAmountWithTimeLock;
         return userTotalStakeAmount >= hostAmount;
     }
 
-    function checkHostTier(address _hostAddress) external view returns (uint8 hostTier) {
-        uint256 userTotalStakeAmount = accountsStakingInfo[_hostAddress].totalStakeAmountWithTimeLock;
+    function checkHostTier(
+        address _hostAddress
+    ) external view returns (uint8 hostTier) {
+        uint256 userTotalStakeAmount = accountsStakingInfo[_hostAddress]
+            .totalStakeAmountWithTimeLock;
 
         // % of assetux profit from the pool with that host / % of volume minted as ASX to host
         if (userTotalStakeAmount < hostAmount + 10000) {
             return 0; // 10% / 0.1%
         } else if (userTotalStakeAmount < hostAmount + 20000) {
             return 1; // 20% / 0.2%
-        }else if (userTotalStakeAmount < hostAmount + 30000) {
+        } else if (userTotalStakeAmount < hostAmount + 30000) {
             return 2; // 30% / 0.3%
         } else if (userTotalStakeAmount < hostAmount + 40000) {
             return 3; // 40%% / 0.4%
@@ -360,10 +463,10 @@ contract TokenListingProposal is Initializable, UUPSUpgradeable, OwnableUpgradea
     }
 
     function setApproveAmount(uint256 _approveAmount) external onlyRole(ADMIN) {
-      approveAmount = _approveAmount;
+        approveAmount = _approveAmount;
     }
 
     function setRemoveAmount(uint256 _removeAmount) external onlyRole(ADMIN) {
-      removeAmount = _removeAmount;
+        removeAmount = _removeAmount;
     }
 }
