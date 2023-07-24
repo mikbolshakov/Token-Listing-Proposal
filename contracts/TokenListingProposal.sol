@@ -90,16 +90,6 @@ contract TokenListingProposal is
         address _admin
     ) external initializer {
         require(msg.sender == SMART_CHEF_FACTORY, "Not factory");
-
-        // if (IERC20Upgradeable(_incentiveTokenAddress).allowance(msg.sender, address(this)) < _incentiveTokenAmount) {
-        //     IERC20Upgradeable(_incentiveTokenAddress).approve(address(this), type(uint256).max);
-        // } // It is does not work
-
-        // if (asxAddress.allowance(msg.sender, address(0)) < _asxFee) {
-        //     asxAddress.approve(address(0), type(uint256).max);
-        // } Error: approve on 0 address
-
-        // asxAddress.transferFrom(msg.sender, address(0), _asxFee); Error: transfer on 0 address (need burn)
         IERC20Upgradeable(_incentiveTokenAddress).transferFrom(
             msg.sender,
             address(this),
@@ -117,7 +107,7 @@ contract TokenListingProposal is
         state = State.Default;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
-        // transferOwnership(_admin);
+        transferOwnership(_admin);
 
         emit CreatedProposal(
             incentiveTokenAddress,
@@ -131,7 +121,6 @@ contract TokenListingProposal is
         uint256 _lockPeriod
     ) external {
         require(state != State.Removed);
-        // minimum stake amount = minimum withdraw amount
 
         IERC20Upgradeable(asxAddress).transferFrom(
             msg.sender,
@@ -222,8 +211,6 @@ contract TokenListingProposal is
     }
 
     function withdrawWhenApproved(uint256 _amount) external isApproved {
-        // minimum stake amount = minimum withdraw amount
-
         uint256 amountToWithdraw;
         uint256 amountToWithdrawWithTimeLock;
         for (

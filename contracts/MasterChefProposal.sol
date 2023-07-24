@@ -38,7 +38,6 @@ contract MasterChefProposal is Ownable {
             tokenListingAddress,
             _incentiveTokenAmount
         );
-        //  IERC20Upgradeable(_incentiveTokenAddress).transferFrom(tokenListingAddress, tokenListingAddress, _incentiveTokenAmount);
 
         TokenListingProposal(tokenListingAddress).initialize(
             _incentiveTokenAddress,
